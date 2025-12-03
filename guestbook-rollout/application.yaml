@@ -6,7 +6,8 @@ metadata:
 spec:
   project: default  # This application belongs to the default Argo CD project.
   source:
-    repoURL: https://github.com/crazylearning-cr/argo-rollout-guestbook-blue-green.git  # GitHub repository that contains my manifests
+    # repoURL: https://github.com/crazylearning-cr/argo-rollout-guestbook-blue-green.git  # GitHub repository that contains my manifests
+    repoURL: https://github.com/tchatua/argo-rollout-blue-green.git     # GitHub repository that contains my manifests
     path: guestbook-rollout # Directory inside the repo where Kubernetes YAML is located
     targetRevision: HEAD    # Branch/tag to use (HEAD = latest version of default branch)
   destination:  # This tells Argo CD where to deploy the application:
