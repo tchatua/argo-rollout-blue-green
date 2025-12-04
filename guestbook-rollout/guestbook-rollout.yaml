@@ -1,101 +1,78 @@
-# ---------------------------------------------------------------------------------------
-# --This manifest defines a basic rollout for the guestbook UI app.----------------------
-# --Pods are ready only after passing the readiness probe.-------------------------------
-#   --Missing part: ---------------------------------------------------------------------
-#       -- Deployment strategy (blueGreen or canary) is not included here; --------------
-#       -- the rollout will default to Recreate strategy if no strategy is specified. ---
-# ---------------------------------------------------------------------------------------
-apiVersion: argoproj.io/v1alpha1    # API version for Argo Rollouts (alpha-level features)
-kind: Rollout # Rollout is an Argo CD custom resource for deploying apps with advanced deployment strategies like Blue-Green or Canary.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
-  name: guestbook-ui        # Unique name of the rollout in the namespace.
-  namespace: default        # Kubernetes namespace where this rollout will be applied.
+  name: guestbook-ui
+  namespace: default
 spec:
-  replicas: 3               # Desired number of pod replicas  -  Launches 3 pods for my app
-  revisionHistoryLimit: 2   # Keeps only the last 2 revisions for rollback purposes; older versions are cleaned up.
-  selector:             # Selects which pods belong to this rollout based on the label app: guestbook-ui.
-    matchLabels:        # Must match the labels in template.metadata.labels to ensure proper association.
+  replicas: 3
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
       app: guestbook-ui
-  template:     # Pod Definition
+  template:
     metadata:
-      labels:   # Labels assigned to pods; must match the selector.
+      labels:
         app: guestbook-ui
     spec:
-      containers:   # Defines container specifications.
+      containers:
         - name: guestbook-ui
-          image: udemykcloud534/guestbook:green # Docker image used.
-          imagePullPolicy: Always   # Always pull the latest version of this image - Ensures the image is pulled every time the pod starts.
+          image: udemykcloud534/guestbook:blue
+          imagePullPolicy: Always
           ports:
-            - containerPort: 8080   # Exposes port 8080 from the container - Exposes container port for the service.
-          readinessProbe:           # Ensures pods are healthy before they receive traffic. (Checks if the pod is ready to receive traffic.) [This ensures only healthy pods are added to the service endpoint.]
+            - containerPort: 8080
+          readinessProbe:
             httpGet:
-              path: /       # Probe checks the root endpoint
+              path: /
               port: 8080
-            initialDelaySeconds: 5  # Wait 5 seconds after container starts before first check.
-            periodSeconds: 10       # Check every 10 seconds.
+            initialDelaySeconds: 5
+            periodSeconds: 10
   strategy:
-    blueGreen:                                      # Use the Blue-Green deployment strategy
-      activeService: guestbook-ui                   # Service pointing to the active (live) version
-      previewService: guestbook-ui-blue-green       # Service used to preview the new version
-      autoPromotionEnabled: false                   # Requires manual promotion after verification
-      scaleDownDelaySeconds: 300                    # Delay before scaling down old ReplicaSet (5 minutes)
-
+    blueGreen:
+      activeService: guestbook-ui
+      previewService: guestbook-ui-blue-green
+      autoPromotionEnabled: false
+      scaleDownDelaySeconds: 300
 ---
-# Kubernetes Service
-apiVersion: v1  # This is a standard Kubernetes API version used for core resources like Services, Pods, ConfigMaps, etc.
-kind: Service   # This resource exposes a set of Pods as a network service. (In this case, it exposes the guestbook-ui application so users or other services can access it.)
-metadata:
-  # This name is important because Argo Rollouts will use this service as the activeService when doing Blue-Green deployments.
-  name: guestbook-ui # The service name will be guestbook-ui.
-  namespace: default # The service lives in the default namespace.
-spec:           # Service Specification
-  # Port Mapping
-  # Clients send traffic to port 80, but the service forwards it to the container's 8080.
-  ports:
-    - port: 80          # The port the Service exposes inside the cluster (ClusterIP port).
-      targetPort: 8080  # The port on the container/pod where your application listens.
-  selector: # This connects the Service to Pods based on labels.
-    app: guestbook-ui
-
----
-# guestbook-ui-blue-green Service used in the Argo Rollouts Blue-Green deployment.
 apiVersion: v1
 kind: Service
 metadata:
-  name: guestbook-ui-blue-green # Name of the service used as the "previewService" in the Blue-Green strategy.
-  namespace: default            # This service will be created in the default namespace.
+  name: guestbook-ui
+  namespace: default
 spec:
   ports:
-    - port: 80          # The service exposes port 80 externally.
-      targetPort: 8080  # Traffic received on port 80 is forwarded to port 8080 inside the pod.
+    - port: 80
+      targetPort: 8080
   selector:
-    app: guestbook-ui   # The service routes traffic to pods with the label app=guestbook-ui.
-
---- 
-# Ingress manifest for the guestbook-ui application:
-# Ingress is used to expose your application externally (using HTTP/HTTPS) via an Ingress Controller — in this case, NGINX.
-# The annotation and ingressClassName both ensure the NGINX Ingress Controller processes this resource.
-# The Ingress forwards all traffic (/) to the guestbook-ui service.
-# Since this is your activeService in a Blue-Green deployment:
-    # Production traffic always goes to the stable version connected to the guestbook-ui service.
-# The preview version (guestbook-ui-blue-green) is not exposed publicly, unless you choose to create a second Ingress for it.
+    app: guestbook-ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guestbook-ui-blue-green
+  namespace: default
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    app: guestbook-ui
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: guestbook-ui-ingress    # Name of the Ingress resource.
-  namespace: default            # Ingress will be created in the default namespace.
+  name: guestbook-ui-ingress
+  namespace: default
   annotations:
-    kubernetes.io/ingress.class: "nginx"    # Tells Kubernetes to use the NGINX Ingress Controller.
+    kubernetes.io/ingress.class: "nginx"
 spec:
-  ingressClassName: nginx       # Specifies that this Ingress should be handled by the nginx controller.
+  ingressClassName: nginx
   rules:
-    - http:                     # Defines HTTP routing rules.
+    - http:
         paths:
-          - path: /             # All traffic going to domain/* is matched.
-            pathType: Prefix    # Prefix match means "/anything" will match this rule
+          - path: /
+            pathType: Prefix
             backend:
               service:
-                name: guestbook-ui  # The destination service (active service).
+                name: guestbook-ui
                 port:
-                  number: 80        # The service port where traffic will be forwarded.
-
+                  number: 80
