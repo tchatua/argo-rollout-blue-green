@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application   # This tells Kubernetes it is an Argo CD Application, not a Deployment/Service/etc.
+metadata:
+  name: guestbook-rollout   # The application is named guestbook-rollout
+  namespace: argocd         # It is created in the argocd namespace (where Argo CD runs)
+spec:
+  project: default  # This application belongs to the default Argo CD project.
+  source:
+    # repoURL: https://github.com/crazylearning-cr/argo-rollout-guestbook-blue-green.git  # GitHub repository that contains my manifests
+    repoURL: https://github.com/tchatua/argo-rollout-blue-green.git     # GitHub repository that contains my manifests
+    path: guestbook-rollout # Directory inside the repo where Kubernetes YAML is located
+    targetRevision: HEAD    # Branch/tag to use (HEAD = latest version of default branch)
+  destination:  # This tells Argo CD where to deploy the application:
+    server: https://kubernetes.default.svc  # Kubernetes cluster where Argo CD is running
+    namespace: default  # In the default namespace
+  syncPolicy:
+    automated: {}
