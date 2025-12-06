@@ -11,7 +11,7 @@ spec:
     path: guestbook-rollout # Directory inside the repo where Kubernetes YAML is located
     targetRevision: HEAD    # Branch/tag to use (HEAD = latest version of default branch)
   destination:  # This tells Argo CD where to deploy the application:
-    server: https://kubernetes.default.svc  # Kubernetes cluster where Argo CD is running
+    server: https://kubernetes.default.svc  # Kubernetes cluster where Argo CD is running # Or EKS Endpoint 
     namespace: default  # In the default namespace
   syncPolicy:
     automated: {}
