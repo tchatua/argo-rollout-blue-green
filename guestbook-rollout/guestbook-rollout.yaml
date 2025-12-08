@@ -29,8 +29,8 @@ spec:
             periodSeconds: 10
   strategy:
     blueGreen:
-      activeService: guestbook-ui
-      previewService: guestbook-ui-blue-green
+      activeService: guestbook-ui-blue-green
+      previewService: guestbook-ui
       autoPromotionEnabled: false
       scaleDownDelaySeconds: 300
 ---
